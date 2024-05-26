@@ -29,6 +29,7 @@ void q_free(struct list_head *head)
     element_t *safe;
     list_for_each_entry_safe (ele, safe, head, list)
         q_release_element(ele);
+    free(head);
 }
 
 /* Insert an element at head of queue */
@@ -46,7 +47,7 @@ bool q_insert_head(struct list_head *head, char *s)
         return false;
     }
     strncpy(new_ele->value, s, str_size);
-    new_ele->value[str_size - 1] = '\0';
+    new_ele->value[str_size] = '\0';
     list_add(&new_ele->list, head);
     return true;
 }
@@ -66,7 +67,7 @@ bool q_insert_tail(struct list_head *head, char *s)
         return false;
     }
     strncpy(new_ele->value, s, str_size);
-    new_ele->value[str_size - 1] = '\0';
+    new_ele->value[str_size] = '\0';
     list_add_tail(&new_ele->list, head);
     return true;
 }
@@ -77,21 +78,21 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
     if (!head || list_empty(head))
         return NULL;
     element_t *removed_ele = list_entry(head->next, element_t, list);
+    list_del_init(&removed_ele->list);
     strncpy(sp, removed_ele->value, bufsize - 1);
     sp[bufsize - 1] = '\0';
-    list_del_init(&removed_ele->list);
     return removed_ele;
 }
 
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (!head || list_empty(head))
+    if (!head || list_empty(head) || !sp)
         return NULL;
     element_t *removed_ele = list_entry(head->prev, element_t, list);
+    list_del_init(&removed_ele->list);
     strncpy(sp, removed_ele->value, bufsize - 1);
     sp[bufsize - 1] = '\0';
-    list_del_init(&removed_ele->list);
     return removed_ele;
 }
 
@@ -120,13 +121,15 @@ bool q_delete_mid(struct list_head *head)
         return true;
     }
     struct list_head *node, *safe;
-    struct list_head *fast = head->next->next;
+    struct list_head *fast = head->next;
 
     list_for_each_safe (node, safe, head) {
         fast = fast->next->next;
         if (fast == head || fast == head->next) {
+            list_del(node);
             element_t *del_ele = list_entry(node, element_t, list);
             q_release_element(del_ele);
+            break;
         }
     }
     return true;
